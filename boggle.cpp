@@ -161,7 +161,7 @@ int main(int argc, const char* argv[])
 		std::string line;
 		while (std::getline(board_file, line))
 		{
-			if (line.size())
+			if (line.size() != 4)
 			{
 				printf("invalid board format (not enough columns, expecting 4x4)");
 				return 1;
