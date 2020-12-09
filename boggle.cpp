@@ -96,11 +96,11 @@ void search_board(const char (&board)[4][4], bool (&marked)[4][4], int i, int j,
 	if (sub_dict == nullptr)
 		return;
 
+	int letter_count = 1;
 	word[len++] = letter;
 
 	if (letter == 'Q')
 	{
-		word[len++] = 'U';
 		sub_dict = sub_dict->get_sub_dictionary('U');
 
 		if (sub_dict == nullptr)
@@ -108,8 +108,11 @@ void search_board(const char (&board)[4][4], bool (&marked)[4][4], int i, int j,
 			word[--len] = '\0';
 			return;
 		}
-	}
 
+		letter_count++;
+		word[len++] = 'U';
+	}
+	
 	marked[i][j] = true;
 
 	if (sub_dict->is_self_word)
@@ -135,7 +138,7 @@ void search_board(const char (&board)[4][4], bool (&marked)[4][4], int i, int j,
 	}
 
 	marked[i][j] = false;
-	word[--len] = '\0';
+	word[len - letter_count] = '\0';
 }
 
 // ---------------------------------------------------------
