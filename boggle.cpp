@@ -23,8 +23,8 @@ struct Dictionary
 	bool add_word(const char* word, int length);
 	bool is_word(const char* word, int length) const;
 
-	std::unique_ptr<Dictionary>& get_sub_dictionary(char c);
-	const std::unique_ptr<Dictionary>& get_sub_dictionary(char c) const;
+	Dictionary* get_sub_dictionary(char c);
+	const Dictionary* get_sub_dictionary(char c) const;
 private:
 	std::unique_ptr<Dictionary> letters[26];
 };
@@ -36,24 +36,24 @@ Dictionary::Dictionary()
 {
 }
 
-std::unique_ptr<Dictionary>& Dictionary::get_sub_dictionary(char c)
+Dictionary* Dictionary::get_sub_dictionary(char c)
 {
-	return letters[toupper(c) - 'A'];
+	return letters[toupper(c) - 'A'].get();
 }
 
-const std::unique_ptr<Dictionary>& Dictionary::get_sub_dictionary(char c) const
+const Dictionary* Dictionary::get_sub_dictionary(char c) const
 {
-	return letters[toupper(c) - 'A'];
+	return letters[toupper(c) - 'A'].get();
 }
 
-bool Dictionary::add_word(const char* word, int length)
+bool Dictionary::add_word(const char* word, const int length)
 {
 	const char letter = *word;
 
 	if (!isalpha(letter))
 		return false;
 
-	auto& sub_dictionary = get_sub_dictionary(letter);
+	auto& sub_dictionary = letters[toupper(letter) - 'A'];
 
 	if (sub_dictionary == nullptr)
 		sub_dictionary = std::make_unique<Dictionary>();
@@ -67,14 +67,14 @@ bool Dictionary::add_word(const char* word, int length)
 	return sub_dictionary->add_word(word + 1, length - 1);
 }
 
-bool Dictionary::is_word(const char* word, int length) const
+bool Dictionary::is_word(const char* word, const int length) const
 {
 	const char letter = *word;
 
 	if (!isalpha(letter))
 		return false;
 
-	const auto& sub_dictionary = get_sub_dictionary(letter);
+	const auto* sub_dictionary = get_sub_dictionary(letter);
 
 	if (sub_dictionary == nullptr)
 		return false;
@@ -84,17 +84,32 @@ bool Dictionary::is_word(const char* word, int length) const
 
 // ---------------------------------------------------------
 
-void search_board(const char (&board)[4][4], bool (&marked)[4][4], int i, int j, char* word, int len, const std::unique_ptr<Dictionary>& dict, std::set<std::string>& words)
+void search_board(const char (&board)[4][4], bool (&marked)[4][4], int i, int j, char* word, int len, const Dictionary* dict, std::set<std::string>& words)
 {
-	if (marked[i][j]) return;
+	if (marked[i][j])
+		return;
 
 	const char letter = board[i][j];
 
-	const auto& sub_dict = dict->get_sub_dictionary(letter);
+	const auto* sub_dict = dict->get_sub_dictionary(letter);
 
-	if (sub_dict == nullptr) return;
+	if (sub_dict == nullptr)
+		return;
 
 	word[len++] = letter;
+
+	if (letter == 'Q')
+	{
+		word[len++] = 'U';
+		sub_dict = sub_dict->get_sub_dictionary('U');
+
+		if (sub_dict == nullptr)
+		{
+			word[--len] = '\0';
+			return;
+		}
+	}
+
 	marked[i][j] = true;
 
 	if (sub_dict->is_self_word)
@@ -127,11 +142,11 @@ void search_board(const char (&board)[4][4], bool (&marked)[4][4], int i, int j,
 
 int main(int argc, const char* argv[])
 {
-	const char* board_filename = argc > 2 ? argv[1] : DEFAULT_BOARD_FILENAME;
-	const char* words_filename = argc > 1 ? argv[2] : DEFAULT_DICTIONARY_FILENAME;
+	const char* board_filename = argc > 1 ? argv[1] : DEFAULT_BOARD_FILENAME;
+	const char* words_filename = argc > 2 ? argv[2] : DEFAULT_DICTIONARY_FILENAME;
 
-	auto& dict = std::make_unique<Dictionary>();
-
+	Dictionary dict;
+ 	
 	{
 		std::ifstream words_file(words_filename);
 
@@ -143,8 +158,10 @@ int main(int argc, const char* argv[])
 
 		std::string line;
 		while (std::getline(words_file, line))
-			dict->add_word(line.c_str(), static_cast<int>(line.size()));
+			dict.add_word(line.c_str(), static_cast<int>(line.size()));
 	}
+
+	puts("done reading words");
 
 	char board[4][4];
 
@@ -183,14 +200,13 @@ int main(int argc, const char* argv[])
 
 	char word[50] = {};
 	bool marked[4][4] = {};
-
 	std::set<std::string> found_words;
 
 	for (int i = 0; i < 4; i++)
 	{
 		for (int j = 0; j < 4; j++)
 		{
-			search_board(board, marked, i, j, word, 0, dict, found_words);
+			search_board(board, marked, i, j, word, 0, &dict, found_words);
 		}
 	}
 
@@ -198,6 +214,8 @@ int main(int argc, const char* argv[])
 	{
 		puts(word.c_str());
 	}
+
+	puts("done outputting words");
 
 	return 0;
 }
