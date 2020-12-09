@@ -161,8 +161,6 @@ int main(int argc, const char* argv[])
 			dict.add_word(line.c_str(), static_cast<int>(line.size()));
 	}
 
-	puts("done reading words");
-
 	char board[4][4];
 
 	{
@@ -214,8 +212,6 @@ int main(int argc, const char* argv[])
 	{
 		puts(word.c_str());
 	}
-
-	puts("done outputting words");
 
 	return 0;
 }
